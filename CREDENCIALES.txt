@@ -1,0 +1,25 @@
+CREDENCIALES DE ACCESO
+
+
+Administrador
+Usuario: admin
+Contraseña: admin
+Cargo: Director del programa
+
+Supervisor
+Usuario: supervisor
+Contraseña: supervisor
+Cargo: Supervisor regional
+
+Encargado de almacén
+Usuario: almacen
+Contraseña: almacen
+Cargo: Responsable de almacén
+
+Operador
+Usuario: operador
+Contraseña: operador
+Cargo: Operador de salidas
+
+NOTA DE SEGURIDAD
+Estas son credenciales de demostración. Cámbialas antes de utilizar el sistema en producción.

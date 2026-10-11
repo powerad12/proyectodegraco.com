@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NutriAula | Desayunos escolares</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div class="brand"><span class="brand-mark">N</span><span>nutriaula</span></div>
+      <div class="workspace-switcher"><span class="workspace-dot"></span><span>Programa escolar</span><span class="chevron">⌄</span></div>
+      <nav class="main-nav" aria-label="Navegación principal">
+        <a class="nav-item active" href="#dashboard" data-view="dashboard"><span>⌂</span>Resumen</a>
+        <a class="nav-item" href="#insumos" data-view="insumos"><span>▦</span>Insumos <b>28</b></a>
+        <a class="nav-item" href="#entradas" data-view="entradas"><span>↥</span>Entradas y lotes</a>
+        <a class="nav-item" href="#salidas" data-view="salidas"><span>↧</span>Salidas y alertas</a>
+        <a class="nav-item" href="#escuelas" data-view="escuelas"><span>♧</span>Escuelas</a>
+        <a class="nav-item" href="#reportes" data-view="reportes"><span>◷</span>Reportes</a>
+      </nav>
+      <div class="nav-label">CONFIGURACIÓN</div>
+      <nav class="main-nav">
+        <a class="nav-item" href="#categorias" data-view="categorias"><span>◈</span>Menús</a>
+        <a class="nav-item" href="#ajustes" data-view="ajustes"><span>⚙</span>Ajustes</a>
+      </nav>
+      <div class="sidebar-footer"><div class="user-avatar">AD</div><div><strong>Administrador</strong><small>Gestión de inventarios</small></div><span class="more">•••</span></div>
+    </aside>
+    <main class="main-content">
+      <header class="topbar"><button class="mobile-menu" aria-label="Abrir menú">☰</button><div class="breadcrumb"><span>Workspace</span><i>/</i><strong id="breadcrumb-title">Resumen</strong></div><div class="top-actions"><button class="icon-btn" aria-label="Notificaciones">♧<em></em></button><button class="help-btn">? <span>Ayuda</span></button><button class="mini-avatar" id="profile-trigger" aria-label="Abrir perfil">AD</button></div></header>
+      <section class="page-content" id="seccion-resumen">
+        <div class="page-heading"><div><p class="eyebrow">JUEVES, 28 AGOSTO 2026</p><h1>Buenos días <span>✦</span></h1><p class="subheading">Así avanza la entrega de desayunos escolares.</p></div><div class="button-group"><button class="primary-btn" id="new-category-btn">＋ Nueva categoría</button><button class="secondary-btn" id="new-product-btn">＋ Nuevo producto</button></div></div>
+        <div class="stats-grid">
+          <article class="stat-card"><div class="stat-top"><span>Volumen Semanal Programado</span><span class="stat-icon mint">▦</span></div><div class="stat-value">85,420 raciones</div><div class="stat-change positive">↗ 4.2% <small>respecto a la anterior semana de distribución en Oruro</small></div></article>
+          <article class="stat-card"><div class="stat-top"><span>Desayunos entregados</span><span class="stat-icon lilac">▦</span></div><div class="stat-value">12,486</div><div class="stat-change positive">↗ 4.6% <small>vs. mes anterior</small></div></article>
+          <article class="stat-card"><div class="stat-top"><span>Escuelas atendidas</span><span class="stat-icon yellow">◈</span></div><div class="stat-value">24</div><div class="stat-change neutral">→ 2 <small>nuevas este mes</small></div></article>
+          <article class="stat-card alert-card"><div class="stat-top"><span>Insumos por reponer</span><span class="stat-icon coral">!</span></div><div class="stat-value">5</div><div class="stat-change negative">↘ 3 <small>requieren atención</small></div></article>
+        </div>
+        <div class="dashboard-grid">
+          <section class="panel chart-panel"><div class="panel-header"><div><h2>Actividad del inventario</h2><p>Entradas y salidas en los últimos 30 días</p></div><select id="chart-period"><option>Últimos 30 días</option><option>Últimos 7 días</option><option>Este año</option></select></div><div class="chart-wrap"><div class="y-axis"><span>400</span><span>300</span><span>200</span><span>100</span><span>0</span></div><div class="chart"><div class="grid-lines"><i></i><i></i><i></i><i></i><i></i></div><svg viewBox="0 0 700 230" preserveAspectRatio="none" aria-label="Gráfica de actividad"><path class="area-in" d="M0,170 C45,165 55,125 95,138 S145,168 180,120 S230,80 265,110 S315,115 350,65 S400,105 440,80 S490,35 530,62 S580,25 620,48 S670,20 700,30 V230 H0Z"></path><path class="line-in" d="M0,170 C45,165 55,125 95,138 S145,168 180,120 S230,80 265,110 S315,115 350,65 S400,105 440,80 S490,35 530,62 S580,25 620,48 S670,20 700,30"></path><path class="line-out" d="M0,195 C45,180 70,205 105,177 S155,190 190,155 S240,165 275,140 S320,155 355,115 S405,135 445,110 S490,125 530,105 S580,120 620,85 S670,102 700,75"></path></svg><div class="x-axis"><span>01 Ago</span><span>08 Ago</span><span>15 Ago</span><span>22 Ago</span><span>28 Ago</span></div></div></div><div class="legend"><span><i class="dot in"></i>Entradas <b>+2,840</b></span><span><i class="dot out"></i>Salidas <b>-1,920</b></span></div></section>
+          <section class="panel low-stock"><div class="panel-header"><div><h2>Insumos por reponer</h2><p>Productos con stock mínimo</p></div><a href="#insumos" data-view="insumos" class="text-link">Ver todos →</a></div><div id="low-stock-list"></div></section>
+        </div>
+        <section class="panel recent-panel"><div class="panel-header"><div><h2>Movimientos recientes</h2><p>Últimas operaciones registradas</p></div><a href="#movimientos" data-view="movimientos" class="text-link">Ver movimientos →</a></div><div class="table-scroll"><table><thead><tr><th>Producto</th><th>Tipo</th><th>Cantidad</th><th>Usuario</th><th>Fecha</th><th>Estado</th></tr></thead><tbody id="movements-table"></tbody></table></div></section>
+      </section>
+      <section class="page-content hidden" id="seccion-insumos"><div class="page-heading"><div><p class="eyebrow">CATÁLOGO</p><h1>Inventario</h1><p class="subheading">Controla existencias, mínimos y alertas de reposición.</p></div><div class="button-group"><button class="primary-btn" id="new-category-btn-2">＋ Nueva categoría</button><button class="secondary-btn" id="new-product-btn-2">＋ Nuevo producto</button></div></div><section class="panel inventory-panel"><div class="inventory-toolbar"><div class="search-box">⌕<input id="search-input" placeholder="Buscar por nombre o SKU..."></div><select id="category-filter"><option value="all">Todas las categorías</option><option>Lácteos</option><option>Cereales</option><option>Panificados</option><option>Frutas</option></select><button class="filter-btn">☷ Filtros</button></div><div class="table-scroll"><table><thead><tr><th>Producto</th><th>SKU</th><th>Categoría</th><th>Stock</th><th>Estado</th><th></th></tr></thead><tbody id="inventory-table"></tbody></table></div></section></section>
+    </main>
+  </div>
+  <div class="modal-backdrop hidden" id="modal"><div class="modal"><button class="close-modal" id="close-modal">×</button><p class="eyebrow">NUEVO REGISTRO</p><h2>Agregar producto</h2><form id="product-form"><label>Nombre del producto<input name="name" required placeholder="Ej. Monitor 27 pulgadas"></label><div class="form-row"><label>SKU<input name="sku" required placeholder="MON-027"></label><label>Categoría<select name="category"><option>Electrónica</option><option>Oficina</option><option>Mobiliario</option></select></label></div><div class="form-row"><label>Stock inicial<input name="stock" type="number" min="0" required value="0"></label><label>Precio unitario<input name="price" type="number" min="0" step="0.01" required value="0"></label></div><button class="primary-btn full" type="submit">Guardar producto</button></form></div></div>
+  <script src="app-enhanced.js"></script>
+</body>
+</html>
