@@ -1165,7 +1165,20 @@ function bindGlobalEvents() {
     if (link) {
       event.preventDefault();
       showView(link.dataset.view);
+      $('.sidebar')?.classList.remove('open');
     }
+  });
+
+  document.addEventListener('click', event => {
+    const sidebar = $('.sidebar');
+    if (!sidebar?.classList.contains('open') || window.matchMedia('(min-width: 681px)').matches) return;
+    if (!sidebar.contains(event.target) && !event.target.closest('.mobile-menu')) {
+      sidebar.classList.remove('open');
+    }
+  });
+
+  document.addEventListener('keydown', event => {
+    if (event.key === 'Escape') $('.sidebar')?.classList.remove('open');
   });
 
   document.addEventListener('click', event => {
