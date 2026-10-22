@@ -19,11 +19,14 @@
         <a class="nav-item" href="#insumos" data-view="insumos"><span>▦</span>Insumos <b>28</b></a>
         <a class="nav-item" href="#entradas" data-view="entradas"><span>↥</span>Entradas y lotes</a>
         <a class="nav-item" href="#salidas" data-view="salidas"><span>↧</span>Salidas y alertas</a>
+        <a class="nav-item" href="#movimientos" data-view="movimientos"><span>⇄</span>Kardex de movimientos</a>
+        <a class="nav-item" href="#caducidad" data-view="caducidad"><span>◷</span>Caducidades</a>
         <a class="nav-item" href="#escuelas" data-view="escuelas"><span>♧</span>Escuelas</a>
         <a class="nav-item" href="#reportes" data-view="reportes"><span>◷</span>Reportes</a>
       </nav>
       <div class="nav-label">CONFIGURACIÓN</div>
       <nav class="main-nav">
+        <a class="nav-item" href="#mapa" data-view="mapa"><span>⌘</span>Mapa de navegación</a>
         <a class="nav-item" href="#categorias" data-view="categorias"><span>◈</span>Menús</a>
         <a class="nav-item" href="#ajustes" data-view="ajustes"><span>⚙</span>Ajustes</a>
       </nav>
@@ -32,7 +35,7 @@
     <main class="main-content">
       <header class="topbar"><button class="mobile-menu" aria-label="Abrir menú">☰</button><div class="breadcrumb"><span>Workspace</span><i>/</i><strong id="breadcrumb-title">Resumen</strong></div><div class="top-actions"><button class="icon-btn" aria-label="Notificaciones">♧<em></em></button><button class="help-btn">? <span>Ayuda</span></button><button class="mini-avatar" id="profile-trigger" aria-label="Abrir perfil">AD</button></div></header>
       <section class="page-content" id="seccion-resumen">
-        <div class="page-heading"><div><p class="eyebrow">JUEVES, 28 AGOSTO 2026</p><h1>Buenos días <span>✦</span></h1><p class="subheading">Así avanza la entrega de desayunos escolares.</p></div><div class="button-group"><button class="primary-btn" id="new-category-btn">＋ Nueva categoría</button><button class="secondary-btn" id="new-product-btn">＋ Nuevo producto</button></div></div>
+        <div class="page-heading"><div><p class="eyebrow">JUEVES, 28 AGOSTO 2026</p><h1>Buenos días <span>✦</span></h1><p class="subheading">Así avanza la entrega de desayunos escolares.</p></div></div>
         <div class="stats-grid">
           <article class="stat-card"><div class="stat-top"><span>Volumen Semanal Programado</span><span class="stat-icon mint">▦</span></div><div class="stat-value">85,420 raciones</div><div class="stat-change positive">↗ 4.2% <small>respecto a la anterior semana de distribución en Oruro</small></div></article>
           <article class="stat-card"><div class="stat-top"><span>Desayunos entregados</span><span class="stat-icon lilac">▦</span></div><div class="stat-value">12,486</div><div class="stat-change positive">↗ 4.6% <small>vs. mes anterior</small></div></article>
@@ -51,4 +54,4 @@
   <div class="modal-backdrop hidden" id="modal"><div class="modal"><button class="close-modal" id="close-modal">×</button><p class="eyebrow">NUEVO REGISTRO</p><h2>Agregar producto</h2><form id="product-form"><label>Nombre del producto<input name="name" required placeholder="Ej. Monitor 27 pulgadas"></label><div class="form-row"><label>SKU<input name="sku" required placeholder="MON-027"></label><label>Categoría<select name="category"><option>Electrónica</option><option>Oficina</option><option>Mobiliario</option></select></label></div><div class="form-row"><label>Stock inicial<input name="stock" type="number" min="0" required value="0"></label><label>Precio unitario<input name="price" type="number" min="0" step="0.01" required value="0"></label></div><button class="primary-btn full" type="submit">Guardar producto</button></form></div></div>
   <script src="app-enhanced.js"></script>
 </body>
-</html>
+</html> 

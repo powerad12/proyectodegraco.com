@@ -1,5 +1,6 @@
 const STORAGE_KEY = 'nutriaula-session';
 const SCHOOLS_STORAGE_KEY = 'nutriaula-schools';
+const MENUS_STORAGE_KEY = 'nutriaula-menus';
 
 const demoProducts = [
   { idProducto: 1, nombreProducto: 'Lácteo Líquido (Sabor Frutilla)', codigoProducto: 'LAC-FRU-001', categoria: 'Lácteos', stockActual: 420, stockMinimo: 600, alertaStock: true },
@@ -15,6 +16,22 @@ const demoMovements = [
   { producto: 'Pan de Trigo Fortificado', escuela: 'Escuela Sor Juana', tipo: 'Salida', cantidad: 190, fecha: '2026-08-27T14:05:00', referencia: 'ENT-027', observacion: 'Entrega completa' }
 ];
 
+function dateOffset(days) {
+  const date = new Date();
+  date.setDate(date.getDate() + days);
+  date.setMinutes(date.getMinutes() - date.getTimezoneOffset());
+  return date.toISOString().slice(0, 10);
+}
+
+const demoExpiryLots = [
+  { idProducto: 1, codigoLote: 'LAC-ORU-2601', fechaVencimiento: dateOffset(-3), cantidadActual: 35 },
+  { idProducto: 1, codigoLote: 'LAC-ORU-2602', fechaVencimiento: dateOffset(4), cantidadActual: 145 },
+  { idProducto: 2, codigoLote: 'GAL-ORU-2601', fechaVencimiento: dateOffset(12), cantidadActual: 280 },
+  { idProducto: 3, codigoLote: 'PAN-ORU-2601', fechaVencimiento: dateOffset(24), cantidadActual: 410 },
+  { idProducto: 4, codigoLote: 'AVE-ORU-2601', fechaVencimiento: dateOffset(45), cantidadActual: 180 },
+  { idProducto: 5, codigoLote: 'BAN-ORU-2601', fechaVencimiento: dateOffset(75), cantidadActual: 90 }
+];
+
 const demoSchools = [
   { nombre: 'Escuela Benito Juárez', zona: 'Centro', raciones: 320, fecha: '2026-08-28', estado: 'Entregada' },
   { nombre: 'Escuela Miguel Hidalgo', zona: 'Norte', raciones: 280, fecha: '2026-09-04', estado: 'Pendiente' },
@@ -28,7 +45,9 @@ const state = {
   customProducts: [],
   categories: [...new Set(demoProducts.map(product => product.categoria).concat(['General']))],
   movements: [...demoMovements],
+  expiryLots: [...demoExpiryLots],
   schools: [...demoSchools],
+  menus: [],
   reportData: []
 };
 
@@ -111,6 +130,26 @@ function normalizeMovement(item) {
 
 function formatNumber(value) {
   return Number(value || 0).toLocaleString('es-BO');
+}
+
+function escapeHtml(value) {
+  return String(value ?? '').replace(/[&<>"']/g, character => ({
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#39;'
+  })[character]);
+}
+
+function formatCurrency(value) {
+  return `Bs ${Number(value || 0).toLocaleString('es-BO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+}
+
+function localDateInputValue() {
+  const date = new Date();
+  date.setMinutes(date.getMinutes() - date.getTimezoneOffset());
+  return date.toISOString().slice(0, 10);
 }
 
 function formatDate(value) {
@@ -205,6 +244,9 @@ function showView(view) {
   if (view === 'insumos') renderInventory();
   if (view === 'entradas' || view === 'salidas') renderOperations(view);
   if (view === 'reportes') renderReport();
+  if (view === 'movimientos') renderKardex();
+  if (view === 'caducidad') renderExpiryReport();
+  if (view === 'mapa') renderNavigationMap();
   if (view === 'escuelas') renderSchools();
   if (view === 'categorias') renderMenusView();
   if (view === 'ajustes') renderSettingsView();
@@ -467,6 +509,192 @@ async function renderReport(showNotification = false) {
   }
 
   if (showNotification) showToast('Reporte generado correctamente.', 'success');
+}
+
+function renderNavigationMap() {
+  const map = $('#navigation-map');
+  if (!map) return;
+
+  map.innerHTML = `
+    <div class="navigation-flow">
+      <a class="navigation-node navigation-home" href="#dashboard" data-view="dashboard">
+        <span>01 · INICIO</span><strong>Resumen</strong><small>Indicadores y alertas generales</small>
+      </a>
+      <div class="navigation-branches">
+        <a class="navigation-node" href="#insumos" data-view="insumos">
+          <span>02 · CATÁLOGO</span><strong>Insumos</strong><small>Productos, categorías y existencias</small>
+        </a>
+        <div class="navigation-branch">
+          <a class="navigation-node" href="#entradas" data-view="entradas">
+            <span>03 · ABASTECIMIENTO</span><strong>Entradas y lotes</strong><small>Recepción y vencimientos</small>
+          </a>
+          <a class="navigation-node" href="#salidas" data-view="salidas">
+            <span>04 · DISTRIBUCIÓN</span><strong>Salidas y alertas</strong><small>Despacho a escuelas</small>
+          </a>
+        </div>
+        <a class="navigation-node" href="#movimientos" data-view="movimientos">
+          <span>05 · TRAZABILIDAD</span><strong>Kardex de movimientos</strong><small>Historial y saldo por producto</small>
+        </a>
+        <a class="navigation-node" href="#caducidad" data-view="caducidad">
+          <span>06 · CONTROL</span><strong>Caducidades</strong><small>Lotes vencidos y próximos a vencer</small>
+        </a>
+        <a class="navigation-node" href="#escuelas" data-view="escuelas">
+          <span>07 · COBERTURA</span><strong>Escuelas</strong><small>Programación de entregas</small>
+        </a>
+        <a class="navigation-node" href="#reportes" data-view="reportes">
+          <span>08 · AUDITORÍA</span><strong>Reportes</strong><small>Consulta y exportación de operaciones</small>
+        </a>
+      </div>
+      <div class="navigation-footer">
+        <a class="navigation-node" href="#categorias" data-view="categorias"><span>CONFIGURACIÓN</span><strong>Menús</strong></a>
+        <a class="navigation-node" href="#ajustes" data-view="ajustes"><span>CONFIGURACIÓN</span><strong>Ajustes</strong></a>
+      </div>
+    </div>`;
+}
+
+function renderKardex() {
+  const tbody = $('#kardex-table');
+  if (!tbody) return;
+
+  const productSelect = $('#kardex-product');
+  const selectedProductId = productSelect?.value || 'all';
+  if (productSelect) {
+    const options = ['<option value="all">Todos los productos</option>']
+      .concat(getAllProducts().map(product => `<option value="${product.idProducto}">${escapeHtml(product.nombreProducto)}</option>`));
+    productSelect.innerHTML = options.join('');
+    productSelect.value = getAllProducts().some(product => String(product.idProducto) === selectedProductId)
+      ? selectedProductId
+      : 'all';
+  }
+
+  const from = $('#kardex-from')?.value || '';
+  const to = $('#kardex-to')?.value || '';
+  const chronological = [...state.movements].sort((a, b) => new Date(a.fecha) - new Date(b.fecha));
+  const netByProduct = new Map();
+  chronological.forEach(item => {
+    const product = findProductByReference(item.producto);
+    if (!product) return;
+    const movementDelta = item.tipo === 'Entrada' ? Number(item.cantidad) : -Number(item.cantidad);
+    netByProduct.set(product.idProducto, (netByProduct.get(product.idProducto) || 0) + movementDelta);
+  });
+
+  const balanceByProduct = new Map(getAllProducts().map(product => [
+    product.idProducto,
+    Number(product.stockActual) - (netByProduct.get(product.idProducto) || 0)
+  ]));
+  const ledger = chronological.map(item => {
+    const product = findProductByReference(item.producto);
+    const productId = product?.idProducto;
+    const delta = item.tipo === 'Entrada' ? Number(item.cantidad) : -Number(item.cantidad);
+    const balance = productId ? (balanceByProduct.get(productId) || 0) + delta : null;
+    if (productId) balanceByProduct.set(productId, balance);
+    return { ...item, productId, balance };
+  }).filter(item => {
+    const itemDate = (item.fecha || '').slice(0, 10);
+    return (selectedProductId === 'all' || String(item.productId) === selectedProductId) &&
+      (!from || itemDate >= from) && (!to || itemDate <= to);
+  }).reverse();
+
+  const entries = ledger.filter(item => item.tipo === 'Entrada').reduce((sum, item) => sum + Number(item.cantidad), 0);
+  const exits = ledger.filter(item => item.tipo !== 'Entrada').reduce((sum, item) => sum + Number(item.cantidad), 0);
+  const summary = $('#kardex-summary');
+  if (summary) {
+    summary.innerHTML = `
+      <article class="stat-card"><div class="stat-top"><span>Entradas del período</span></div><div class="stat-value">+${formatNumber(entries)}</div><div class="stat-change positive">unidades recibidas</div></article>
+      <article class="stat-card"><div class="stat-top"><span>Salidas del período</span></div><div class="stat-value">-${formatNumber(exits)}</div><div class="stat-change negative">unidades despachadas</div></article>
+      <article class="stat-card"><div class="stat-top"><span>Movimientos</span></div><div class="stat-value">${ledger.length}</div><div class="stat-change neutral">operaciones en el kardex</div></article>`;
+  }
+
+  tbody.innerHTML = ledger.length
+    ? ledger.map(item => `
+      <tr>
+        <td>${formatDate(item.fecha)}</td>
+        <td><strong>${escapeHtml(item.producto)}</strong><small class="table-subtext">${escapeHtml(item.referencia || '—')}</small></td>
+        <td>${escapeHtml(item.escuela || 'Almacén central')}</td>
+        <td><span class="${item.tipo === 'Entrada' ? 'type-in' : 'type-out'}">${escapeHtml(item.tipo)}</span></td>
+        <td class="${item.tipo === 'Entrada' ? 'stock-good' : 'stock-low'}">${item.tipo === 'Entrada' ? '+' : '−'}${formatNumber(item.cantidad)}</td>
+        <td><strong>${item.balance === null ? '—' : `${formatNumber(item.balance)} uds.`}</strong></td>
+      </tr>
+    `).join('')
+    : '<tr><td colspan="6">No hay movimientos para los filtros seleccionados.</td></tr>';
+}
+
+function getExpiryStatus(daysRemaining) {
+  if (daysRemaining < 0) return { label: 'Vencido', className: 'expiry-expired' };
+  if (daysRemaining <= 7) return { label: 'Crítico', className: 'expiry-critical' };
+  if (daysRemaining <= 30) return { label: 'Próximo', className: 'expiry-soon' };
+  return { label: 'Vigente', className: 'expiry-valid' };
+}
+
+function daysUntilExpiry(dateValue) {
+  const expiryDate = new Date(`${dateValue}T00:00:00`);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  return Math.ceil((expiryDate.getTime() - today.getTime()) / 86400000);
+}
+
+function renderExpiryReport(showNotification = false) {
+  const tbody = $('#expiry-table');
+  if (!tbody) return;
+
+  const filter = $('#expiry-filter')?.value || 'all';
+  const productFilter = $('#expiry-product')?.value || 'all';
+  const productSelect = $('#expiry-product');
+  if (productSelect) {
+    const options = ['<option value="all">Todos los productos</option>']
+      .concat(getAllProducts().map(product => `<option value="${product.idProducto}">${escapeHtml(product.nombreProducto)}</option>`));
+    productSelect.innerHTML = options.join('');
+    productSelect.value = getAllProducts().some(product => String(product.idProducto) === productFilter)
+      ? productFilter
+      : 'all';
+  }
+
+  const lots = state.expiryLots.map(lot => {
+    const product = getAllProducts().find(item => item.idProducto === lot.idProducto);
+    const daysRemaining = daysUntilExpiry(lot.fechaVencimiento);
+    return { ...lot, product, daysRemaining, status: getExpiryStatus(daysRemaining) };
+  }).filter(lot => {
+    if (!lot.product) return false;
+    if (productFilter !== 'all' && String(lot.idProducto) !== productFilter) return false;
+    if (filter === 'expired') return lot.daysRemaining < 0;
+    if (filter === 'critical') return lot.daysRemaining >= 0 && lot.daysRemaining <= 7;
+    if (filter === 'soon') return lot.daysRemaining >= 0 && lot.daysRemaining <= 30;
+    if (filter === 'valid') return lot.daysRemaining > 30;
+    return true;
+  }).sort((first, second) => first.daysRemaining - second.daysRemaining);
+
+  const allLots = state.expiryLots.map(lot => ({ ...lot, daysRemaining: daysUntilExpiry(lot.fechaVencimiento) }));
+  const expired = allLots.filter(lot => lot.daysRemaining < 0);
+  const critical = allLots.filter(lot => lot.daysRemaining >= 0 && lot.daysRemaining <= 7);
+  const unitsAtRisk = allLots.filter(lot => lot.daysRemaining <= 30).reduce((sum, lot) => sum + Number(lot.cantidadActual), 0);
+  const summary = $('#expiry-summary');
+  if (summary) {
+    summary.innerHTML = `
+      <article class="stat-card alert-card"><div class="stat-top"><span>Lotes vencidos</span></div><div class="stat-value">${expired.length}</div><div class="stat-change negative">requieren revisión inmediata</div></article>
+      <article class="stat-card"><div class="stat-top"><span>Vencen en 7 días</span></div><div class="stat-value">${critical.length}</div><div class="stat-change negative">lotes en estado crítico</div></article>
+      <article class="stat-card"><div class="stat-top"><span>Unidades en riesgo</span></div><div class="stat-value">${formatNumber(unitsAtRisk)}</div><div class="stat-change neutral">vencidas o vencen en 30 días</div></article>`;
+  }
+
+  tbody.innerHTML = lots.length
+    ? lots.map(lot => `
+      <tr class="${lot.daysRemaining < 0 ? 'fila-critica' : ''}">
+        <td><strong>${escapeHtml(lot.product.nombreProducto)}</strong><small class="table-subtext">${escapeHtml(lot.product.codigoProducto)}</small></td>
+        <td>${escapeHtml(lot.codigoLote)}</td>
+        <td>${formatDate(lot.fechaVencimiento)}</td>
+        <td>${lot.daysRemaining < 0 ? `${Math.abs(lot.daysRemaining)} días vencido` : `${lot.daysRemaining} días`}</td>
+        <td>${formatNumber(lot.cantidadActual)} uds.</td>
+        <td><span class="expiry-badge ${lot.status.className}">${lot.status.label}</span></td>
+      </tr>
+    `).join('')
+    : '<tr><td colspan="6">No hay lotes para los filtros seleccionados.</td></tr>';
+
+  if (showNotification) showToast('Reporte de caducidades actualizado.', 'success');
+}
+
+function printExpiryReport() {
+  document.body.classList.add('print-expiry');
+  window.addEventListener('afterprint', () => document.body.classList.remove('print-expiry'), { once: true });
+  window.print();
 }
 
 async function ensurePdfLibrary() {
@@ -935,22 +1163,219 @@ function renderMenusView() {
         <p class="eyebrow">PLANIFICACIÓN</p>
         <h3>Menú escolar</h3>
         <p>Define comidas por categoría y asigna cobertura por escuela.</p>
-        <button class="secondary-btn">Crear menú</button>
+        <button class="secondary-btn" data-menu-action="create">Crear menú</button>
       </article>
       <article class="info-card">
         <p class="eyebrow">COBERTURA</p>
         <h3>Asignación</h3>
         <p>Visualiza qué escuelas reciben cada insumo y su volumen total.</p>
-        <button class="secondary-btn">Ver distribución</button>
+        <button class="secondary-btn" data-menu-action="distribution">Ver distribución</button>
       </article>
       <article class="info-card">
         <p class="eyebrow">PRESUPUESTO</p>
         <h3>Costos</h3>
         <p>Revisa el costo estimado por menú semanal y por grupo.</p>
-        <button class="secondary-btn">Calcular</button>
+        <button class="secondary-btn" data-menu-action="costs">Calcular costos</button>
       </article>
     </div>
+    <section class="panel recent-panel">
+      <div class="panel-header"><div><h2>Menús registrados</h2><p>Recetas, cobertura y fecha programada.</p></div></div>
+      <div class="table-scroll">
+        <table>
+          <thead><tr><th>Menú</th><th>Fecha</th><th>Escuelas</th><th>Insumos</th><th>Costo por ración</th></tr></thead>
+          <tbody>
+            ${state.menus.length ? state.menus.map(menu => `
+              <tr>
+                <td><strong>${escapeHtml(menu.nombre)}</strong></td>
+                <td>${formatDate(menu.fecha)}</td>
+                <td>${menu.escuelas.length}</td>
+                <td>${menu.ingredientes.map(ingredient => escapeHtml(ingredient.nombreProducto)).join(', ')}</td>
+                <td>${formatCurrency(getMenuCostPerRation(menu))}</td>
+              </tr>
+            `).join('') : '<tr><td colspan="5">Aún no hay menús registrados.</td></tr>'}
+          </tbody>
+        </table>
+      </div>
+    </section>
   `;
+}
+
+function getMenuCostPerRation(menu) {
+  return menu.ingredientes.reduce((total, ingredient) => total + ingredient.cantidadPorRacion * ingredient.costoUnitario, 0);
+}
+
+function openMenuModal() {
+  if (!canWrite()) {
+    showToast('Tu perfil no tiene permiso para crear menús.', 'error');
+    return;
+  }
+  if (!getAllProducts().length || !state.schools.length) {
+    showToast('Registra al menos un insumo y una escuela antes de crear un menú.', 'error');
+    return;
+  }
+
+  const modal = document.createElement('div');
+  modal.className = 'modal-backdrop';
+  modal.innerHTML = `
+    <div class="modal">
+      <button class="close-modal" aria-label="Cerrar">×</button>
+      <p class="eyebrow">PLANIFICACIÓN</p>
+      <h2>Crear menú</h2>
+      <form id="menu-form">
+        <label>Nombre del menú<input name="nombre" required maxlength="100" placeholder="Ej. Desayuno de cereales"></label>
+        <label>Fecha programada<input name="fecha" type="date" required value="${localDateInputValue()}"></label>
+        <fieldset class="menu-school-list">
+          <legend>Escuelas destinatarias</legend>
+          ${state.schools.map(school => `
+            <label><input type="checkbox" name="escuela" value="${escapeHtml(school.nombre)}"> ${escapeHtml(school.nombre)} <small>(${formatNumber(school.raciones)} raciones)</small></label>
+          `).join('')}
+        </fieldset>
+        <fieldset>
+          <legend>Insumos por ración</legend>
+          <div id="menu-ingredients"></div>
+          <button class="secondary-btn" type="button" data-add-menu-ingredient>＋ Agregar insumo</button>
+        </fieldset>
+        <button class="primary-btn full" type="submit">Guardar menú</button>
+      </form>
+    </div>
+  `;
+
+  document.body.appendChild(modal);
+  modal.querySelector('.close-modal').addEventListener('click', () => modal.remove());
+
+  const ingredientsContainer = modal.querySelector('#menu-ingredients');
+  const addIngredientRow = () => {
+    const row = document.createElement('div');
+    row.className = 'form-row menu-ingredient-row';
+    row.innerHTML = `
+      <label>Insumo<select name="productoId" required>
+        ${getAllProducts().map(product => `<option value="${escapeHtml(product.idProducto)}">${escapeHtml(product.nombreProducto)}</option>`).join('')}
+      </select></label>
+      <label>Cantidad por ración<input name="cantidadPorRacion" type="number" min="0.001" step="0.001" required placeholder="Ej. 0.25"></label>
+      <label>Costo unitario (Bs)<input name="costoUnitario" type="number" min="0" step="0.01" required placeholder="Ej. 2.50"></label>
+      <button class="row-action" type="button" data-remove-menu-ingredient aria-label="Quitar insumo">Quitar</button>
+    `;
+    ingredientsContainer.appendChild(row);
+  };
+  addIngredientRow();
+
+  modal.querySelector('[data-add-menu-ingredient]').addEventListener('click', addIngredientRow);
+  ingredientsContainer.addEventListener('click', event => {
+    if (!event.target.closest('[data-remove-menu-ingredient]')) return;
+    if (ingredientsContainer.children.length === 1) {
+      showToast('El menú debe incluir al menos un insumo.', 'warning');
+      return;
+    }
+    event.target.closest('.menu-ingredient-row').remove();
+  });
+
+  modal.querySelector('#menu-form').addEventListener('submit', event => {
+    event.preventDefault();
+    const form = event.currentTarget;
+    const nombre = new FormData(form).get('nombre')?.toString().trim();
+    const fecha = new FormData(form).get('fecha')?.toString();
+    const escuelas = [...form.querySelectorAll('[name="escuela"]:checked')].map(input => input.value);
+    const ingredientes = [...ingredientsContainer.querySelectorAll('.menu-ingredient-row')].map(row => {
+      const product = getAllProducts().find(item => String(item.idProducto) === row.querySelector('[name="productoId"]').value);
+      return {
+        idProducto: product?.idProducto,
+        nombreProducto: product?.nombreProducto,
+        cantidadPorRacion: Number(row.querySelector('[name="cantidadPorRacion"]').value),
+        costoUnitario: Number(row.querySelector('[name="costoUnitario"]').value)
+      };
+    });
+
+    if (!nombre || !fecha || !escuelas.length) {
+      showToast('Indica el nombre, la fecha y al menos una escuela destinataria.', 'error');
+      return;
+    }
+    if (ingredientes.some(item => !item.idProducto || !Number.isFinite(item.cantidadPorRacion) || item.cantidadPorRacion <= 0 || !Number.isFinite(item.costoUnitario) || item.costoUnitario < 0)) {
+      showToast('Revisa los insumos, cantidades y costos unitarios.', 'error');
+      return;
+    }
+
+    const menu = {
+      id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      nombre,
+      fecha,
+      escuelas,
+      ingredientes
+    };
+    const menus = [...state.menus, menu];
+    try {
+      localStorage.setItem(MENUS_STORAGE_KEY, JSON.stringify(menus));
+    } catch (error) {
+      console.error('No se pudo guardar el menú.', error);
+      showToast('No se pudo guardar el menú en este dispositivo.', 'error');
+      return;
+    }
+
+    state.menus = menus;
+    modal.remove();
+    renderMenusView();
+    showToast('Menú creado correctamente.', 'success');
+  });
+}
+
+function openMenuDistribution() {
+  const rows = state.menus.flatMap(menu => menu.escuelas.flatMap(schoolName => {
+    const school = state.schools.find(item => item.nombre === schoolName);
+    if (!school) return [];
+    return menu.ingredientes.map(ingredient => `
+      <tr>
+        <td>${escapeHtml(menu.nombre)}</td>
+        <td>${escapeHtml(school.nombre)}</td>
+        <td>${formatNumber(school.raciones)}</td>
+        <td>${escapeHtml(ingredient.nombreProducto)}</td>
+        <td>${formatNumber(ingredient.cantidadPorRacion * school.raciones)}</td>
+      </tr>
+    `);
+  }));
+  openMenuResultsModal('Distribución de menús', `
+    <p class="subheading">Insumos requeridos según las raciones programadas en cada escuela.</p>
+    <div class="table-scroll"><table>
+      <thead><tr><th>Menú</th><th>Escuela</th><th>Raciones</th><th>Insumo</th><th>Cantidad requerida</th></tr></thead>
+      <tbody>${rows.length ? rows.join('') : '<tr><td colspan="5">Crea un menú y asigna escuelas para consultar su distribución.</td></tr>'}</tbody>
+    </table></div>
+  `);
+}
+
+function openMenuCosts() {
+  const rows = state.menus.flatMap(menu => menu.escuelas.map(schoolName => {
+    const school = state.schools.find(item => item.nombre === schoolName);
+    if (!school) return '';
+    const rationCount = Number(school.raciones || 0);
+    const itemRows = menu.ingredientes.map(ingredient => {
+      const quantity = ingredient.cantidadPorRacion * rationCount;
+      return `<tr><td>${escapeHtml(ingredient.nombreProducto)}</td><td>${formatNumber(quantity)}</td><td>${formatCurrency(ingredient.costoUnitario)}</td><td>${formatCurrency(quantity * ingredient.costoUnitario)}</td></tr>`;
+    }).join('');
+    const total = getMenuCostPerRation(menu) * rationCount;
+    return `<tr class="menu-cost-heading"><td colspan="4"><strong>${escapeHtml(menu.nombre)}</strong> · ${escapeHtml(school.nombre)} · ${formatNumber(rationCount)} raciones</td></tr>${itemRows}<tr><td colspan="3"><strong>Costo total del grupo</strong></td><td><strong>${formatCurrency(total)}</strong></td></tr>`;
+  })).filter(Boolean);
+  const totalCost = state.menus.reduce((sum, menu) => sum + getMenuCostPerRation(menu) * menu.escuelas.reduce((schoolSum, schoolName) => schoolSum + Number(state.schools.find(item => item.nombre === schoolName)?.raciones || 0), 0), 0);
+  openMenuResultsModal('Costos estimados', `
+    <p class="subheading">Cálculo basado en el costo unitario de cada insumo y las raciones programadas.</p>
+    <div class="table-scroll"><table>
+      <thead><tr><th>Insumo</th><th>Cantidad</th><th>Costo unitario</th><th>Subtotal</th></tr></thead>
+      <tbody>${rows.length ? rows.join('') : '<tr><td colspan="4">Crea un menú para calcular sus costos.</td></tr>'}</tbody>
+      ${rows.length ? `<tfoot><tr><th colspan="3">Costo estimado total</th><th>${formatCurrency(totalCost)}</th></tr></tfoot>` : ''}
+    </table></div>
+  `);
+}
+
+function openMenuResultsModal(title, content) {
+  const modal = document.createElement('div');
+  modal.className = 'modal-backdrop';
+  modal.innerHTML = `
+    <div class="modal">
+      <button class="close-modal" aria-label="Cerrar">×</button>
+      <p class="eyebrow">MENÚS</p>
+      <h2>${escapeHtml(title)}</h2>
+      ${content}
+    </div>
+  `;
+  document.body.appendChild(modal);
+  modal.querySelector('.close-modal').addEventListener('click', () => modal.remove());
 }
 
 function renderSettingsView() {
@@ -1059,6 +1484,83 @@ function ensureDynamicViews() {
         </div>
       </section>
     </section>
+    <section class="page-content hidden" id="seccion-movimientos">
+      <div class="page-heading">
+        <div>
+          <p class="eyebrow">TRAZABILIDAD</p>
+          <h1>Kardex de movimientos</h1>
+          <p class="subheading">Consulta entradas, salidas y saldo por producto en orden cronológico.</p>
+        </div>
+      </div>
+      <section class="panel report-filters">
+        <label>Producto<select id="kardex-product"><option value="all">Todos los productos</option></select></label>
+        <label>Desde<input id="kardex-from" type="date"></label>
+        <label>Hasta<input id="kardex-to" type="date"></label>
+        <button class="primary-btn" id="filter-kardex">Aplicar filtros</button>
+      </section>
+      <div class="stats-grid" id="kardex-summary"></div>
+      <section class="panel">
+        <div class="panel-header">
+          <div><h2>Libro de movimientos</h2><p>El saldo se calcula desde el inventario actual y el historial registrado.</p></div>
+          <span class="status">● Trazabilidad activa</span>
+        </div>
+        <div class="table-scroll">
+          <table>
+            <thead><tr><th>Fecha</th><th>Producto / referencia</th><th>Destino / origen</th><th>Tipo</th><th>Variación</th><th>Saldo</th></tr></thead>
+            <tbody id="kardex-table"></tbody>
+          </table>
+        </div>
+      </section>
+    </section>
+    <section class="page-content hidden" id="seccion-caducidad">
+      <div class="page-heading">
+        <div>
+          <p class="eyebrow">CONTROL DE LOTES</p>
+          <h1>Reporte de caducidades</h1>
+          <p class="subheading">Identifica lotes vencidos y prioriza productos próximos a vencer.</p>
+        </div>
+        <button class="secondary-btn" id="print-expiry-report">▣ Imprimir reporte</button>
+      </div>
+      <section class="panel report-filters">
+        <label>Estado del lote
+          <select id="expiry-filter">
+            <option value="all">Todos los estados</option>
+            <option value="expired">Vencidos</option>
+            <option value="critical">Vencen en 7 días</option>
+            <option value="soon">Vencen en 30 días</option>
+            <option value="valid">Vigentes</option>
+          </select>
+        </label>
+        <label>Producto<select id="expiry-product"><option value="all">Todos los productos</option></select></label>
+        <button class="primary-btn" id="filter-expiry">Generar reporte</button>
+      </section>
+      <div class="stats-grid" id="expiry-summary"></div>
+      <section class="panel">
+        <div class="panel-header">
+          <div><h2>Estado de lotes</h2><p>Prioriza la rotación FEFO de los lotes con menor tiempo restante.</p></div>
+          <span class="status">● Seguimiento de vencimientos</span>
+        </div>
+        <div class="table-scroll">
+          <table>
+            <thead><tr><th>Producto</th><th>Lote</th><th>Fecha de vencimiento</th><th>Tiempo restante</th><th>Existencia</th><th>Estado</th></tr></thead>
+            <tbody id="expiry-table"></tbody>
+          </table>
+        </div>
+      </section>
+    </section>
+    <section class="page-content hidden" id="seccion-mapa">
+      <div class="page-heading">
+        <div>
+          <p class="eyebrow">GUÍA DEL SISTEMA</p>
+          <h1>Mapa de navegación</h1>
+          <p class="subheading">Recorrido sugerido entre los módulos de inventario y distribución.</p>
+        </div>
+      </div>
+      <section class="panel navigation-map-panel">
+        <div class="panel-header"><div><h2>Flujo de trabajo</h2><p>Selecciona una etapa para abrir directamente ese módulo.</p></div></div>
+        <div id="navigation-map"></div>
+      </section>
+    </section>
     <section class="page-content hidden" id="seccion-escuelas">
       <div class="page-heading">
         <div>
@@ -1091,7 +1593,7 @@ function ensureDynamicViews() {
           <h1>Programación de menús</h1>
           <p class="subheading">Organiza desayunos por tipo, dieta y distribución escolar.</p>
         </div>
-        <button class="primary-btn">＋ Nuevo menú</button>
+        <button class="primary-btn" data-menu-action="create">＋ Nuevo menú</button>
       </div>
       <section class="panel" id="menu-panel"></section>
     </section>
@@ -1112,6 +1614,14 @@ function ensureDynamicViews() {
   $('#pdf-report')?.addEventListener('click', exportReportPdf);
   $('#report-from')?.addEventListener('change', renderReport);
   $('#report-to')?.addEventListener('change', renderReport);
+  $('#filter-kardex')?.addEventListener('click', renderKardex);
+  $('#kardex-product')?.addEventListener('change', renderKardex);
+  $('#kardex-from')?.addEventListener('change', renderKardex);
+  $('#kardex-to')?.addEventListener('change', renderKardex);
+  $('#filter-expiry')?.addEventListener('click', () => renderExpiryReport(true));
+  $('#expiry-filter')?.addEventListener('change', renderExpiryReport);
+  $('#expiry-product')?.addEventListener('change', renderExpiryReport);
+  $('#print-expiry-report')?.addEventListener('click', printExpiryReport);
 
   const primaryEntryButton = $('#seccion-entradas .primary-btn');
   const primaryExitButton = $('#seccion-salidas .primary-btn');
@@ -1149,6 +1659,46 @@ async function loadSchools() {
   state.schools = (savedSchools.length ? savedSchools : demoSchools).map(normalizeSchool);
   renderSchools();
   renderDashboard();
+}
+
+function loadMenus() {
+  let savedMenus;
+  try {
+    savedMenus = JSON.parse(localStorage.getItem(MENUS_STORAGE_KEY) || '[]');
+  } catch (error) {
+    console.error('No se pudieron leer los menús guardados.', error);
+    state.menus = [];
+    showToast('No se pudieron cargar los menús guardados.', 'error');
+    return;
+  }
+
+  if (!Array.isArray(savedMenus)) {
+    console.error('Los menús guardados tienen un formato no válido.');
+    state.menus = [];
+    showToast('Los menús guardados tienen un formato no válido.', 'error');
+    return;
+  }
+
+  state.menus = savedMenus.filter(menu =>
+    menu && typeof menu.nombre === 'string' && typeof menu.fecha === 'string' &&
+    Array.isArray(menu.escuelas) && Array.isArray(menu.ingredientes) && menu.ingredientes.length > 0
+  ).map(menu => ({
+    id: String(menu.id || ''),
+    nombre: menu.nombre,
+    fecha: menu.fecha,
+    escuelas: menu.escuelas.filter(school => typeof school === 'string'),
+    ingredientes: menu.ingredientes.filter(ingredient =>
+      ingredient && typeof ingredient.nombreProducto === 'string' &&
+      Number.isFinite(Number(ingredient.cantidadPorRacion)) && Number(ingredient.cantidadPorRacion) > 0 &&
+      Number.isFinite(Number(ingredient.costoUnitario)) && Number(ingredient.costoUnitario) >= 0
+    ).map(ingredient => ({
+      idProducto: ingredient.idProducto,
+      nombreProducto: ingredient.nombreProducto,
+      cantidadPorRacion: Number(ingredient.cantidadPorRacion),
+      costoUnitario: Number(ingredient.costoUnitario)
+    }))
+  })).filter(menu => menu.ingredientes.length > 0);
+  renderMenusView();
 }
 
 async function loadMovements() {
@@ -1193,6 +1743,14 @@ function bindGlobalEvents() {
     if (action) openScheduleModal(action.dataset.scheduleSchool);
   });
 
+  document.addEventListener('click', event => {
+    const action = event.target.closest('[data-menu-action]');
+    if (!action) return;
+    if (action.dataset.menuAction === 'create') openMenuModal();
+    if (action.dataset.menuAction === 'distribution') openMenuDistribution();
+    if (action.dataset.menuAction === 'costs') openMenuCosts();
+  });
+
   $('#search-input')?.addEventListener('input', renderInventory);
   $('#category-filter')?.addEventListener('change', renderInventory);
   $('.mobile-menu')?.addEventListener('click', () => $('.sidebar').classList.toggle('open'));
@@ -1210,11 +1768,10 @@ function initializeAuthenticatedApp() {
   if (sidebarRole) sidebarRole.textContent = state.session.user.cargo;
 
   $('#profile-trigger')?.addEventListener('click', openProfile);
-  $('#new-product-btn')?.addEventListener('click', openNewProductModal);
   $('#new-product-btn-2')?.addEventListener('click', openNewProductModal);
-  $('#new-category-btn')?.addEventListener('click', openNewCategoryModal);
   $('#new-category-btn-2')?.addEventListener('click', openNewCategoryModal);
 
+  loadMenus();
   loadProducts();
   loadSchools();
   loadMovements();
