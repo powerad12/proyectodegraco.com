@@ -633,23 +633,11 @@ function daysUntilExpiry(dateValue) {
   return Math.ceil((expiryDate.getTime() - today.getTime()) / 86400000);
 }
 
-function renderExpiryReport(showNotification = false) {
-  const tbody = $('#expiry-table');
-  if (!tbody) return;
-
+function getFilteredExpiryLots() {
   const filter = $('#expiry-filter')?.value || 'all';
   const productFilter = $('#expiry-product')?.value || 'all';
-  const productSelect = $('#expiry-product');
-  if (productSelect) {
-    const options = ['<option value="all">Todos los productos</option>']
-      .concat(getAllProducts().map(product => `<option value="${product.idProducto}">${escapeHtml(product.nombreProducto)}</option>`));
-    productSelect.innerHTML = options.join('');
-    productSelect.value = getAllProducts().some(product => String(product.idProducto) === productFilter)
-      ? productFilter
-      : 'all';
-  }
 
-  const lots = state.expiryLots.map(lot => {
+  return state.expiryLots.map(lot => {
     const product = getAllProducts().find(item => item.idProducto === lot.idProducto);
     const daysRemaining = daysUntilExpiry(lot.fechaVencimiento);
     return { ...lot, product, daysRemaining, status: getExpiryStatus(daysRemaining) };
@@ -662,6 +650,24 @@ function renderExpiryReport(showNotification = false) {
     if (filter === 'valid') return lot.daysRemaining > 30;
     return true;
   }).sort((first, second) => first.daysRemaining - second.daysRemaining);
+}
+
+function renderExpiryReport(showNotification = false) {
+  const tbody = $('#expiry-table');
+  if (!tbody) return;
+
+  const productFilter = $('#expiry-product')?.value || 'all';
+  const productSelect = $('#expiry-product');
+  if (productSelect) {
+    const options = ['<option value="all">Todos los productos</option>']
+      .concat(getAllProducts().map(product => `<option value="${product.idProducto}">${escapeHtml(product.nombreProducto)}</option>`));
+    productSelect.innerHTML = options.join('');
+    productSelect.value = getAllProducts().some(product => String(product.idProducto) === productFilter)
+      ? productFilter
+      : 'all';
+  }
+
+  const lots = getFilteredExpiryLots();
 
   const allLots = state.expiryLots.map(lot => ({ ...lot, daysRemaining: daysUntilExpiry(lot.fechaVencimiento) }));
   const expired = allLots.filter(lot => lot.daysRemaining < 0);
@@ -689,6 +695,145 @@ function renderExpiryReport(showNotification = false) {
     : '<tr><td colspan="6">No hay lotes para los filtros seleccionados.</td></tr>';
 
   if (showNotification) showToast('Reporte de caducidades actualizado.', 'success');
+}
+
+async function exportExpiryReportPdf() {
+  const lots = getFilteredExpiryLots();
+  const filterLabel = $('#expiry-filter')?.selectedOptions[0]?.textContent || 'Todos los estados';
+  const productLabel = $('#expiry-product')?.selectedOptions[0]?.textContent || 'Todos los productos';
+
+  try {
+    await ensurePdfLibrary();
+    if (!window.jspdf?.jsPDF) throw new Error('La biblioteca PDF no está disponible.');
+
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ unit: 'pt', format: 'a4' });
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
+    const margin = 40;
+    const tableWidth = pageWidth - margin * 2;
+    const columns = [
+      { label: 'Producto', width: 135 },
+      { label: 'Lote', width: 75 },
+      { label: 'Vencimiento', width: 75 },
+      { label: 'Tiempo restante', width: 90 },
+      { label: 'Existencia', width: 68 },
+      { label: 'Estado', width: tableWidth - 443 }
+    ];
+    const expiredCount = lots.filter(lot => lot.daysRemaining < 0).length;
+    const criticalCount = lots.filter(lot => lot.daysRemaining >= 0 && lot.daysRemaining <= 7).length;
+    const unitsAtRisk = lots
+      .filter(lot => lot.daysRemaining <= 30)
+      .reduce((sum, lot) => sum + Number(lot.cantidadActual || 0), 0);
+    let y = 0;
+
+    const drawTableHeader = () => {
+      doc.setFillColor(244, 247, 251);
+      doc.roundedRect(margin, y, tableWidth, 22, 5, 5, 'F');
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(8);
+      doc.setTextColor(31, 41, 55);
+      let x = margin + 8;
+      columns.forEach(column => {
+        doc.text(column.label, x, y + 14, { maxWidth: column.width - 8 });
+        x += column.width;
+      });
+      y += 22;
+    };
+
+    const drawPageHeading = (includeSummary) => {
+      doc.setFillColor(25, 53, 93);
+      doc.roundedRect(margin, 28, tableWidth, 56, 9, 9, 'F');
+      doc.setTextColor(255, 255, 255);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(18);
+      doc.text('Reporte de caducidades', margin + 16, 52);
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(8);
+      doc.text(`Generado: ${formatDate(new Date().toISOString())}`, margin + 16, 70);
+      doc.text(`Estado: ${filterLabel} · Producto: ${productLabel}`, margin + 215, 70, { maxWidth: tableWidth - 230 });
+
+      y = 102;
+      if (includeSummary) {
+        const cards = [
+          { label: 'Lotes vencidos', value: String(expiredCount), color: [255, 234, 226] },
+          { label: 'Vencen en 7 días', value: String(criticalCount), color: [255, 241, 200] },
+          { label: 'Unidades en riesgo', value: formatNumber(unitsAtRisk), color: [214, 243, 230] }
+        ];
+        const cardGap = 10;
+        const cardWidth = (tableWidth - cardGap * 2) / cards.length;
+        cards.forEach((card, index) => {
+          const x = margin + index * (cardWidth + cardGap);
+          doc.setFillColor(...card.color);
+          doc.roundedRect(x, y, cardWidth, 42, 7, 7, 'F');
+          doc.setTextColor(31, 41, 55);
+          doc.setFont('helvetica', 'normal');
+          doc.setFontSize(8);
+          doc.text(card.label, x + 10, y + 15);
+          doc.setFont('helvetica', 'bold');
+          doc.setFontSize(13);
+          doc.text(card.value, x + 10, y + 33);
+        });
+        y += 56;
+      }
+      drawTableHeader();
+    };
+
+    drawPageHeading(true);
+    doc.setDrawColor(214, 221, 233);
+    doc.setLineWidth(0.5);
+
+    if (!lots.length) {
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(9);
+      doc.setTextColor(75, 85, 99);
+      doc.text('No hay lotes para los filtros seleccionados.', margin + 8, y + 18);
+    } else {
+      lots.forEach((lot, index) => {
+        const remaining = lot.daysRemaining < 0
+          ? `${Math.abs(lot.daysRemaining)} días vencido`
+          : `${lot.daysRemaining} días`;
+        const values = [
+          lot.product.nombreProducto,
+          lot.codigoLote,
+          formatDate(lot.fechaVencimiento),
+          remaining,
+          `${formatNumber(lot.cantidadActual)} uds.`,
+          lot.status.label
+        ];
+        const lines = values.map((value, columnIndex) =>
+          doc.splitTextToSize(String(value), columns[columnIndex].width - 10)
+        );
+        const rowHeight = Math.max(20, ...lines.map(value => value.length * 9 + 8));
+
+        if (y + rowHeight > pageHeight - 40) {
+          doc.addPage();
+          y = 28;
+          drawTableHeader();
+        }
+
+        doc.setFillColor(index % 2 === 0 ? 255 : 248, 250, 252);
+        doc.rect(margin, y, tableWidth, rowHeight, 'F');
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(7.5);
+        doc.setTextColor(31, 41, 55);
+        let x = margin + 5;
+        lines.forEach((value, columnIndex) => {
+          doc.text(value, x, y + 13, { lineHeightFactor: 1.15 });
+          x += columns[columnIndex].width;
+        });
+        doc.setDrawColor(214, 221, 233);
+        doc.line(margin, y + rowHeight, margin + tableWidth, y + rowHeight);
+        y += rowHeight;
+      });
+    }
+
+    doc.save(`reporte-caducidades-${new Date().toISOString().slice(0, 10)}.pdf`);
+    showToast('PDF de caducidades descargado correctamente.', 'success');
+  } catch (error) {
+    console.error('No se pudo generar el PDF de caducidades.', error);
+    showToast('No se pudo generar el PDF. Verifica tu conexión e inténtalo de nuevo.', 'error');
+  }
 }
 
 function printExpiryReport() {
@@ -1519,7 +1664,10 @@ function ensureDynamicViews() {
           <h1>Reporte de caducidades</h1>
           <p class="subheading">Identifica lotes vencidos y prioriza productos próximos a vencer.</p>
         </div>
-        <button class="secondary-btn" id="print-expiry-report">▣ Imprimir reporte</button>
+        <div class="button-group">
+          <button class="secondary-btn" id="download-expiry-pdf">▣ Descargar PDF</button>
+          <button class="secondary-btn" id="print-expiry-report">Imprimir reporte</button>
+        </div>
       </div>
       <section class="panel report-filters">
         <label>Estado del lote
@@ -1621,6 +1769,7 @@ function ensureDynamicViews() {
   $('#filter-expiry')?.addEventListener('click', () => renderExpiryReport(true));
   $('#expiry-filter')?.addEventListener('change', renderExpiryReport);
   $('#expiry-product')?.addEventListener('change', renderExpiryReport);
+  $('#download-expiry-pdf')?.addEventListener('click', exportExpiryReportPdf);
   $('#print-expiry-report')?.addEventListener('click', printExpiryReport);
 
   const primaryEntryButton = $('#seccion-entradas .primary-btn');
